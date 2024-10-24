@@ -190,79 +190,81 @@ function ST.attemptMerchantCache()
 		local merchantItemCount = GetMerchantNumItems()
 		if(framePoint == -8) then
 			local numPages = ceil(merchantItemCount / 10)
-			if(MerchantFrame.page < numPages) then
-				MerchantItem9:SetPoint('TOPLEFT', 'MerchantItem7', 'BOTTOMLEFT', 0, -9)
-				MerchantFrame.page = MerchantFrame.page + 1
-				MerchantFrame_Update()
-			else
-				MerchantFrame.page = 1
-				MerchantFrame_Update()
+			if(ST.merchantAttempts > 0) then
+				if(MerchantFrame.page < numPages) then
+					MerchantItem9:SetPoint('TOPLEFT', 'MerchantItem7', 'BOTTOMLEFT', 0, -9)
+					MerchantFrame.page = MerchantFrame.page + 1
+					MerchantFrame_Update()
+				else
+					MerchantFrame.page = 1
+					MerchantFrame_Update()
+				end
+			end
 				
-				ST.merchant = {}
-				local itemsFound = 0
-				for index = 1, merchantItemCount, 1 do
-					local itemLink = GetMerchantItemLink(index)
+			ST.merchant = {}
+			local itemsFound = 0
+			for index = 1, merchantItemCount, 1 do
+				local itemLink = GetMerchantItemLink(index)
+				
+				if(itemLink ~= nil) then
+					itemsFound = itemsFound + 1
+				
+					local itemID = itemLink:gsub('^|%x+|Hitem:', ''):gsub(':.+$', '')
+					local itemName, _, _, _, _, _, _, _, _, itemTexture = GetItemInfo(itemLink)
+					local _, _, _, _, _, _, extendedCost = GetMerchantItemInfo(index)
 					
-					if(itemLink ~= nil) then
-						itemsFound = itemsFound + 1
-					
-						local itemID = itemLink:gsub('^|%x+|Hitem:', ''):gsub(':.+$', '')
-						local itemName, _, _, _, _, _, _, _, _, itemTexture = GetItemInfo(itemLink)
-						local _, _, _, _, _, _, extendedCost = GetMerchantItemInfo(index)
+					if(extendedCost == 1) then
+						local _, _, itemCount = GetMerchantItemCostInfo(index)
 						
-						if(extendedCost == 1) then
-							local _, _, itemCount = GetMerchantItemCostInfo(index)
+						if(itemCount > 0) then
+							local item = {
+								['index'] = index,
+								['link'] = itemLink,
+								['name'] = itemName,
+								['attune'] = -1,
+								['icon'] = itemTexture,
+								['costs'] = {}
+							}
 							
-							if(itemCount > 0) then
-								local item = {
-									['index'] = index,
-									['link'] = itemLink,
-									['name'] = itemName,
-									['attune'] = -1,
-									['icon'] = itemTexture,
-									['costs'] = {}
-								}
+							local hasToken = false
+							local canAfford = true
+							for currencyIndex = 1, 3 do
+								local currencyTexture, currencyCount, currencyItemLink = GetMerchantItemCostItem(index, currencyIndex)
 								
-								local hasToken = false
-								local canAfford = true
-								for currencyIndex = 1, 3 do
-									local currencyTexture, currencyCount, currencyItemLink = GetMerchantItemCostItem(index, currencyIndex)
+								if(currencyItemLink ~= nil) then
+									local currencyItemName = GetItemInfo(currencyItemLink)
 									
-									if(currencyItemLink ~= nil) then
-										local currencyItemName = GetItemInfo(currencyItemLink)
-										
-										if(ST.inventory[currencyItemLink] ~= nil) then
-											hasToken = true
+									if(ST.inventory[currencyItemLink] ~= nil) then
+										hasToken = true
+									end
+									
+									if(canAfford) then
+										if(ST.currencies[currencyItemName] ~= nil) then
+											if(ST.currencies[currencyItemName] < currencyCount) then
+												canAfford = false
+											end
+										elseif(ST.inventory[currencyItemLink] == nil or ST.inventory[currencyItemLink].quantity < currencyCount) then
+											canAfford = false
 										end
 										
 										if(canAfford) then
-											if(ST.currencies[currencyItemName] ~= nil) then
-												if(ST.currencies[currencyItemName] < currencyCount) then
-													canAfford = false
-												end
-											elseif(ST.inventory[currencyItemLink] == nil or ST.inventory[currencyItemLink].quantity < currencyCount) then
-												canAfford = false
-											end
-											
-											if(canAfford) then
-												table.insert(item.costs, {
-													['link'] = currencyItemLink,
-													['name'] = currencyItemName,
-													['icon'] = currencyTexture,
-													['quantity'] = currencyCount
-												})
-											end
+											table.insert(item.costs, {
+												['link'] = currencyItemLink,
+												['name'] = currencyItemName,
+												['icon'] = currencyTexture,
+												['quantity'] = currencyCount
+											})
 										end
 									end
 								end
-								
-								if(hasToken and canAfford) then					
-									if(GetItemAttuneForge ~= nil) then
-										item.attune = GetItemAttuneForge(itemID)
-									end
-								
-									table.insert(ST.merchant, item)
+							end
+							
+							if(hasToken and canAfford) then					
+								if(GetItemAttuneForge ~= nil) then
+									item.attune = GetItemAttuneForge(itemID)
 								end
+							
+								table.insert(ST.merchant, item)
 							end
 						end
 					end
@@ -509,6 +511,7 @@ function ST.renderFrame()
 		ST.setupUi()
 	end
 	
+	ST.hideAllSubFrames()
 	ST.frame:Show()
 	costGroups = {}
 	
@@ -551,8 +554,8 @@ function ST.renderFrame()
 			
 			table.insert(costTextArray, cost.quantity .. ' x ' .. cost.link .. ' (' .. playerHasCurrency .. ')')
 		end
-		costGroup.costs.text:SetText(table.concat(costTextArray, '\n'))
 		
+		costGroup.costs.text:SetText(table.concat(costTextArray, '\n'))
 		costGroup.items:SetHeight(5 + (table.getn(items) * ST.itemHeight))
 		
 		cumulativeHeight = cumulativeHeight + costGroup.master:GetHeight()
@@ -582,7 +585,6 @@ function ST.hideAllSubFrames()
 end
 
 function ST.merchantShow()
-	ST.hideAllSubFrames()
 	ST.getInventory()
 	ST.getCurrencies()
 	ST.getMerchantItems()

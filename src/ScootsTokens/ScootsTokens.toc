@@ -1,0 +1,8 @@
+## Interface: 30300
+## Title: Scoots Tokens
+## Author: Scoots
+## Notes: Adds a popup window to make trading tokens easier
+
+## Version: 3.3.5
+
+ScootsTokens.lua

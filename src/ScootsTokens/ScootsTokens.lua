@@ -203,13 +203,21 @@ function ST.attemptMerchantCache()
 				
 			ST.merchant = {}
 			local itemsFound = 0
-			for index = 1, merchantItemCount, 1 do
-				local itemLink = GetMerchantItemLink(index)
+			local itemId = nil
+			local itemLink = nil
+			for index = 1, merchantItemCount do
+				if(Custom_GetMerchantItem ~= nil) then
+					itemID, itemLink = Custom_GetMerchantItem(index)
+				else
+					itemLink = GetMerchantItemLink(index)
+					if(itemLink ~= nil) then
+						itemID = itemLink:gsub('^|%x+|Hitem:', ''):gsub(':.+$', '')
+					end
+				end
 				
-				if(itemLink ~= nil) then
+				if(itemID ~= nil and itemLink ~= nil) then
 					itemsFound = itemsFound + 1
 				
-					local itemID = itemLink:gsub('^|%x+|Hitem:', ''):gsub(':.+$', '')
 					local itemName, _, _, _, _, _, _, _, _, itemTexture = GetItemInfo(itemLink)
 					local _, _, _, _, _, _, extendedCost = GetMerchantItemInfo(index)
 					
@@ -269,20 +277,23 @@ function ST.attemptMerchantCache()
 						end
 					end
 				end
-				
-				if(itemsFound == merchantItemCount) then
-					ST.getMerchant = false
-					
-					if(table.getn(ST.merchant) > 0) then
-						ST.renderFrame()
-					else
-						ST.frame:Hide()
-					end
-				else
-					ST.merchantDelay = 10
-					ST.merchantAttempts = ST.merchantAttempts + 1
-				end
 			end
+			
+			if(itemsFound == merchantItemCount) then
+				ST.getMerchant = false
+				
+				if(table.getn(ST.merchant) > 0) then
+					ST.renderFrame()
+				else
+					ST.frame:Hide()
+				end
+			else
+				ST.merchantDelay = 10
+				ST.merchantAttempts = ST.merchantAttempts + 1
+				ST.attemptMerchantCache()
+			end
+		else
+			ST.attemptMerchantCache()
 		end
 	end
 end

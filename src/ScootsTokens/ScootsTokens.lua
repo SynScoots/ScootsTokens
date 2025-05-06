@@ -17,16 +17,15 @@ ST.merchant = {}
 ST.getMerchant = false
 ST.merchantDelay = 0
 ST.merchantAttempts = 0
-ST.rowWidth = ST.frameWidth - (20 + (ST.borderThickness * 2))
 ST.baseScrollHeight = ST.frameHeight - (ST.headerHeight + (ST.borderThickness * 3))
 ST.costGroupFrames = {}
 ST.itemFrames = {}
+ST.derivedWidth = 0
 
 function ST.setupUi()
 	ST.frame:EnableMouse(true)
 	ST.frame:SetPoint('TOPLEFT', MerchantFrame, 'TOPRIGHT', -30, -12)
 	ST.frame:SetFrameStrata(ST.frameStrata)
-	ST.frame:SetWidth(ST.frameWidth)
 	ST.frame:SetHeight(ST.frameHeight)
 	
 	ST.frame.texture = ST.frame:CreateTexture()
@@ -54,13 +53,10 @@ function ST.setupUi()
 		borderFrame:SetFrameLevel(2)
 	end
 	
-	ST.borderFrames.T:SetWidth(ST.frameWidth - (ST.borderThickness * 2))
 	ST.borderFrames.T:SetPoint('TOPLEFT', ST.frame, 'TOPLEFT', ST.borderThickness, 0)
 	
-	ST.borderFrames.M:SetWidth(ST.frameWidth - (ST.borderThickness * 2))
 	ST.borderFrames.M:SetPoint('TOPLEFT', ST.frame, 'TOPLEFT', ST.borderThickness, 0 - (ST.borderThickness + ST.headerHeight))
 	
-	ST.borderFrames.B:SetWidth(ST.frameWidth - (ST.borderThickness * 2))
 	ST.borderFrames.B:SetPoint('BOTTOMLEFT', ST.frame, 'BOTTOMLEFT', ST.borderThickness, 0)
 	
 	ST.borderFrames.L:SetHeight(ST.frameHeight)
@@ -70,7 +66,6 @@ function ST.setupUi()
 	ST.borderFrames.R:SetPoint('TOPRIGHT', ST.frame, 'TOPRIGHT', 0, 0)
 	
 	ST.headerFrame = CreateFrame('Frame', 'STHeaderFrame', ST.frame)
-	ST.headerFrame:SetWidth(ST.frameWidth - (ST.borderThickness * 2))
 	ST.headerFrame:SetHeight(ST.headerHeight)
 	ST.headerFrame:SetPoint('TOPLEFT', ST.frame, 'TOPLEFT', ST.borderThickness, 0 - ST.borderThickness)
 	ST.headerFrame:SetFrameLevel(2)
@@ -118,11 +113,12 @@ function ST.setupUi()
 	ST.scrollframe:SetPoint('BOTTOMRIGHT', ST.frame, 'BOTTOMRIGHT', 0 - ST.borderThickness, ST.borderThickness)
 	ST.scrollframe:SetFrameLevel(2)
 	
-	ST.scrollchild:SetWidth(ST.rowWidth)
 	ST.scrollchild:SetHeight(ST.baseScrollHeight)
 	ST.scrollchild:SetFrameLevel(3)
 	
 	-- End scrollable frame
+
+    ST.setWidths()
 	
 	ST.activeChatFrame = nil
 	for i = 1, 10 do
@@ -134,8 +130,43 @@ function ST.setupUi()
 			ST.activeChatFrame = nil
 		end)
 	end
-
 	ST.loaded = true
+end
+
+ST.setWidths = function()
+    if(ST.headerFrame.text:GetStringWidth() > ST.derivedWidth) then
+        ST.derivedWidth = ST.headerFrame.text:GetStringWidth()
+    end
+    
+    for _, frame in pairs(ST.itemFrames) do
+        if(frame:IsVisible() and frame.text:GetStringWidth() > ST.derivedWidth) then
+            ST.derivedWidth = frame.text:GetStringWidth()
+        end
+    end
+
+    ST.frameWidth = ST.derivedWidth + ST.scrollbar:GetWidth() + (ST.borderThickness * 2) + 16
+    ST.rowWidth = ST.frameWidth - (20 + (ST.borderThickness * 2))
+
+	ST.frame:SetWidth(ST.frameWidth)
+	ST.headerFrame:SetWidth(ST.frameWidth - (ST.borderThickness * 2))
+	ST.borderFrames.T:SetWidth(ST.frameWidth - (ST.borderThickness * 2))
+	ST.borderFrames.M:SetWidth(ST.frameWidth - (ST.borderThickness * 2))
+	ST.borderFrames.B:SetWidth(ST.frameWidth - (ST.borderThickness * 2))
+    
+	ST.scrollchild:SetWidth(ST.rowWidth)
+    
+    for _, frame in pairs(ST.costGroupFrames) do
+		frame.master:SetWidth(ST.rowWidth)
+		frame.costs:SetWidth(ST.rowWidth)
+		frame.border:SetWidth(ST.rowWidth)
+		frame.items:SetWidth(ST.rowWidth)
+    end
+    
+    for _, frame in pairs(ST.itemFrames) do
+		frame:SetWidth(ST.rowWidth)
+		frame.borderTop:SetWidth(ST.rowWidth)
+		frame.borderBottom:SetWidth(ST.rowWidth)
+    end
 end
 
 function ST.getInventory()
@@ -303,11 +334,9 @@ function ST.getCostGroup(index)
 		ST.costGroupFrames[index] = {}
 		
 		ST.costGroupFrames[index].master = CreateFrame('Frame', 'STCostGroup' .. index .. 'Master', ST.scrollchild)
-		ST.costGroupFrames[index].master:SetWidth(ST.rowWidth)
 		ST.costGroupFrames[index].master:SetFrameLevel(4)
 		
 		ST.costGroupFrames[index].costs = CreateFrame('Frame', 'STCostGroup' .. index .. 'Costs', ST.costGroupFrames[index].master)
-		ST.costGroupFrames[index].costs:SetWidth(ST.rowWidth)
 		ST.costGroupFrames[index].costs:SetFrameLevel(5)
 		ST.costGroupFrames[index].costs:SetPoint('TOPLEFT', ST.costGroupFrames[index].master, 'TOPLEFT', 0, 0)
 	
@@ -319,7 +348,6 @@ function ST.getCostGroup(index)
 		
 		ST.costGroupFrames[index].border = CreateFrame('Frame', 'STCostGroup' .. index .. 'Border', ST.costGroupFrames[index].master)
 		ST.costGroupFrames[index].border:SetFrameLevel(5)
-		ST.costGroupFrames[index].border:SetWidth(ST.rowWidth)
 		ST.costGroupFrames[index].border:SetHeight(ST.borderThickness)
 		ST.costGroupFrames[index].border:SetPoint('TOPLEFT', ST.costGroupFrames[index].costs, 'BOTTOMLEFT', 0, 0)
 		
@@ -328,7 +356,6 @@ function ST.getCostGroup(index)
 		ST.costGroupFrames[index].border.texture:SetTexture(1, 0.55, 0, 1)
 		
 		ST.costGroupFrames[index].items = CreateFrame('Frame', 'STCostGroup' .. index .. 'Items', ST.costGroupFrames[index].master)
-		ST.costGroupFrames[index].items:SetWidth(ST.rowWidth)
 		ST.costGroupFrames[index].items:SetFrameLevel(5)
 		ST.costGroupFrames[index].items:SetPoint('TOPLEFT', ST.costGroupFrames[index].border, 'BOTTOMLEFT', 0, 0)
 	end
@@ -398,8 +425,7 @@ function ST.getItemFrames(index, item)
 		ST.itemFrames[index]:SetFrameLevel(6)
 		ST.itemFrames[index]:EnableMouse(true)
 		ST.itemFrames[index].hover = false
-		ST.itemFrames[index]:SetSize(ST.rowWidth, ST.itemHeight)
-		
+		ST.itemFrames[index]:SetHeight(ST.itemHeight)
 		
 		ST.headerFrame.text = ST.headerFrame:CreateFontString(nil, 'ARTWORK')
 		ST.headerFrame.text:SetFont('Fonts\\FRIZQT__.TTF', 12)
@@ -418,14 +444,14 @@ function ST.getItemFrames(index, item)
 		ST.itemFrames[index].texture:SetAllPoints()
 		
 		ST.itemFrames[index].borderTop = CreateFrame('Frame', 'STItem' .. index .. 'BorderTop', ST.itemFrames[index])
-		ST.itemFrames[index].borderTop:SetSize(ST.rowWidth, ST.borderThickness)
+		ST.itemFrames[index].borderTop:SetHeight(ST.borderThickness)
 		ST.itemFrames[index].borderTop:SetPoint('TOPLEFT', ST.itemFrames[index], 'TOPLEFT', 0, 0)
 		ST.itemFrames[index].borderTop.texture = ST.itemFrames[index].borderTop:CreateTexture()
 		ST.itemFrames[index].borderTop.texture:SetAllPoints()
 		ST.itemFrames[index].borderTop:SetFrameLevel(7)
 		
 		ST.itemFrames[index].borderBottom = CreateFrame('Frame', 'STItem' .. index .. 'BorderBottom', ST.itemFrames[index])
-		ST.itemFrames[index].borderBottom:SetSize(ST.rowWidth, ST.borderThickness)
+		ST.itemFrames[index].borderBottom:SetHeight(ST.borderThickness)
 		ST.itemFrames[index].borderBottom:SetPoint('BOTTOMLEFT', ST.itemFrames[index], 'BOTTOMLEFT', 0, 0)
 		ST.itemFrames[index].borderBottom.texture = ST.itemFrames[index].borderBottom:CreateTexture()
 		ST.itemFrames[index].borderBottom.texture:SetAllPoints()
@@ -543,6 +569,7 @@ function ST.renderFrame()
 	costGroupIndex = -1
 	itemIndex = -1
 	cumulativeHeight = 0
+    ST.derivedWidth = 0
 	for _, items in pairs(costGroups) do
 		costGroupIndex = costGroupIndex + 1
 		
@@ -562,8 +589,16 @@ function ST.renderFrame()
 			else
 				playerHasCurrency = ST.currencies[cost.name]
 			end
+            
+            local costString = cost.quantity .. ' x ' .. cost.link .. ' (' .. playerHasCurrency .. ')'
+            
+            costGroup.costs.text:SetText(costString)
+            local costStringWidth = costGroup.costs.text:GetStringWidth()
+            if(ST.derivedWidth < costStringWidth) then
+                ST.derivedWidth = costStringWidth
+            end
 			
-			table.insert(costTextArray, cost.quantity .. ' x ' .. cost.link .. ' (' .. playerHasCurrency .. ')')
+			table.insert(costTextArray, costString)
 		end
 		
 		costGroup.costs.text:SetText(table.concat(costTextArray, '\n'))
@@ -582,6 +617,7 @@ function ST.renderFrame()
 		end
 	end
 	
+    ST.setWidths()
 	ST.scrollchild:SetHeight(10 + cumulativeHeight + (costGroupIndex * 10))
 end
 

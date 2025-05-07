@@ -21,6 +21,8 @@ ST.baseScrollHeight = ST.frameHeight - (ST.headerHeight + (ST.borderThickness * 
 ST.costGroupFrames = {}
 ST.itemFrames = {}
 ST.derivedWidth = 0
+ST.buybackUiOpen = false
+ST.tabsHooked = false
 
 function ST.setupUi()
 	ST.frame:EnableMouse(true)
@@ -130,6 +132,7 @@ function ST.setupUi()
 			ST.activeChatFrame = nil
 		end)
 	end
+    
 	ST.loaded = true
 end
 
@@ -211,6 +214,23 @@ function ST.getMerchantItems()
 end
 
 function ST.attemptMerchantCache()
+    if(ST.tabsHooked == false) then
+        _G['MerchantFrameTab1']:HookScript('OnMouseDown', function()
+            ST.buybackUiOpen = false
+        end)
+        
+        _G['MerchantFrameTab2']:HookScript('OnMouseDown', function()
+            ST.buybackUiOpen = true
+        end)
+        
+        ST.tabsHooked = true
+    end
+
+    if(ST.buybackUiOpen == true) then
+        ST.getMerchant = false
+        return nil
+    end
+
 	if(ST.merchantAttempts == 10) then
 		ST.getMerchant = false
 		print('|cffff0000ScootsTokens: Unable to retrieve all merchant items|r')
@@ -644,6 +664,9 @@ ST.logicFrame:SetScript('OnUpdate', function()
 end)
 
 function ST.eventHandler(self, event)
+    if(event == 'MERCHANT_SHOW') then
+        ST.buybackUiOpen = false
+    end
 	ST.merchantShow()
 end
 

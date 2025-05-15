@@ -344,6 +344,8 @@ function ST.attemptMerchantCache()
 				ST.attemptMerchantCache()
 			end
 		else
+            ST.merchantDelay = 10
+            ST.merchantAttempts = ST.merchantAttempts + 1
 			ST.attemptMerchantCache()
 		end
 	end
